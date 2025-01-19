@@ -1,0 +1,144 @@
+
+version: '3.8'
+
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plex
+    network_mode: host # Recommended for Plex to simplify networking
+    environment:
+      - PUID=1000 # Change to match your user ID
+      - PGID=1000 # Change to match your group ID
+      - VERSION=docker # Set to "public" for non-beta versions
+    volumes:
+      - /home/server/Desktop/appdata/plex:/config
+      - /mnt/myserver:/media
+      - /mnt/myserver1:/tv
+    restart: unless-stopped
+
+
+  tautulli:
+    image: lscr.io/linuxserver/tautulli:latest
+    container_name: tautulli
+    environment:
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /home/server/Desktop/appdata:/config
+    ports:
+      - 8181:8181
+    restart: unless-stopped
+
+  ts-authkey-test:
+    image: tailscale/tailscale:latest
+    container_name: ts-authkey-test
+    hostname: authkey-test
+    environment:
+      - TS_AUTHKEY=tskey-auth-kAVDncq6dB21CNTRL-3pxgLq7oQh4gwhwPqCh2h4Wfu858LVeCH
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - /home/server/Desktop/appdata:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    restart: unless-stopped
+  nginx-authkey-test:
+    image: nginx
+    network_mode: service:ts-authkey-test
+
+  GNU nano 8.1                                       docker-compose.yml
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    ports:
+      - 7878:7878
+    environment:
+      - COMPOSE_PROJECT_NAME
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+      - UMASK=0002
+    volumes:
+      - /home/server/Desktop/appdata:/config
+      - /mnt/myserver:/Movie
+      - /mnt/myserver1:/disk2/movie
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    network_mode: bridge
+    ports:
+      - 8989:8989
+    environment:
+      - COMPOSE_PROJECT_NAME
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /home/server/Desktop/appdata/sonarr:/config
+      - /mnt/myserver:/TV
+      - /mnt/myserver1:/tv
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    network_mode: bridge
+    environment:
+      - COMPOSE_PROJECT_NAME
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /home/server/Desktop/appdata/prowlarr:/config
+    ports:
+      - 9696:9696
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    network_mode: bridge
+    ports:
+      - 6767:6767
+    environment:
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+    volumes:
+      - /home/server/Desktop/appdata/bazarr:/config
+      - /mnt/myserver:/Movies
+      - /mnt/myserver:/TV
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    environment:
+      - TZ=Europe/Sofia
+      - PUID=1000
+      - PGID=1000
+      - WEBUI_PORT=8080
+      - UMASK=002
+    volumes:
+      - /home/server/Desktop/appdata/qbit:/config
+      - /mnt/myserver:/downloads
+      - /mnt/myserver1:/downloads/disk2
+    ports:
+      - 8080:8080
+      - 6881:6881
+      - 6881:6881/udp
+    restart: unless-stopped
+
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --cleanup --interval 3600
+    restart: unless-stopped
